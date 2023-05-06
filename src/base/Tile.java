@@ -1,17 +1,17 @@
 package base;
 
-public class TileGroup extends CellContent{
+public class Tile extends CellContent{
     String color;
     int numberOfElements;
 
-    public TileGroup(String color) {
+    public Tile(String color) {
         this.color = color;
     }
-    public TileGroup(int number) {
+    public Tile(int number) {
         this.numberOfElements = number;
     }
 
-    public TileGroup(String color, int numberOfElements) {
+    public Tile(String color, int numberOfElements) {
         this.color = color;
         this.numberOfElements = numberOfElements;
     }
@@ -33,7 +33,7 @@ public class TileGroup extends CellContent{
         this.color = color;
     }
 
-    public TileGroup() {
+    public Tile() {
         super();
     }
 }

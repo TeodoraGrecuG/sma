@@ -14,6 +14,10 @@ public class Environment
 	Cell[][] cells;
 
 
+	public Environment()
+	{
+		agentsData=new HashMap<>();
+	}
 
 	public Environment(int width, int height, int timeToPerformAction, int totalTimeOfWorking){
 		this.width = width;
@@ -31,6 +35,48 @@ public class Environment
 		}
 	}
 
+	public void allocateCells()
+	{
+		cells = new Cell[height][width];
+		for(int i=0;i<height;i++){
+			for(int j=0;j<width;j++)
+			{
+				cells[i][j] = new Cell(i,j);
+			}
+		}
+	}
+
+	public int getWidth() {
+		return width;
+	}
+
+	public void setWidth(int width) {
+		this.width = width;
+	}
+
+	public int getHeight() {
+		return height;
+	}
+
+	public void setHeight(int height) {
+		this.height = height;
+	}
+
+	public int getTimeToPerformAction() {
+		return timeToPerformAction;
+	}
+
+	public void setTimeToPerformAction(int timeToPerformAction) {
+		this.timeToPerformAction = timeToPerformAction;
+	}
+
+	public int getTotalTimeOfWorking() {
+		return totalTimeOfWorking;
+	}
+
+	public void setTotalTimeOfWorking(int totalTimeOfWorking) {
+		this.totalTimeOfWorking = totalTimeOfWorking;
+	}
 
 	public Cell getCell(int x, int y){
 		return cells[y][x];
@@ -87,10 +133,10 @@ public class Environment
 				if (local.size() > 1) {
 					for (int k = 0; k < local.size() - 1; k++) {
 						for (int l = k + 1; l < local.size(); l++) {
-							if ((local.get(k) instanceof Hole && local.get(l) instanceof TileGroup) || (local.get(k) instanceof TileGroup && local.get(l) instanceof Hole)) {
-								if(local.get(k) instanceof Hole&&local.get(l) instanceof TileGroup)
+							if ((local.get(k) instanceof Hole && local.get(l) instanceof Tile) || (local.get(k) instanceof Tile && local.get(l) instanceof Hole)) {
+								if(local.get(k) instanceof Hole&&local.get(l) instanceof Tile)
 								{
-									int tileNumberOfElem = ((TileGroup)local.get(l)).getNumberOfElements();
+									int tileNumberOfElem = ((Tile)local.get(l)).getNumberOfElements();
 									int holeDepth = ((Hole)local.get(k)).getDepth();
 									if(Objects.equals(local.get(k).getColor(), local.get(l).getColor())){
 										agentsData.get(local.get(l).getColor()).setScore(agentsData.get(local.get(l).getColor()).getScore()+10);
@@ -98,7 +144,7 @@ public class Environment
 									if(tileNumberOfElem>=holeDepth){
 										tileNumberOfElem = tileNumberOfElem - holeDepth;
 										((Hole)cells[i][j].getCellContents().get(k)).setDepth(0);
-										((TileGroup)cells[i][j].getCellContents().get(l)).setNumberOfElements(tileNumberOfElem);
+										((Tile)cells[i][j].getCellContents().get(l)).setNumberOfElements(tileNumberOfElem);
 										if(Objects.equals(local.get(k).getColor(), local.get(l).getColor())) {
 											agentsData.get(local.get(l).getColor()).setScore(agentsData.get(local.get(l).getColor()).getScore() + 40);
 										}
@@ -106,13 +152,13 @@ public class Environment
 									else{
 										holeDepth = holeDepth-tileNumberOfElem;
 										((Hole)cells[i][j].getCellContents().get(k)).setDepth(holeDepth);
-										((TileGroup)cells[i][j].getCellContents().get(l)).setNumberOfElements(0);
+										((Tile)cells[i][j].getCellContents().get(l)).setNumberOfElements(0);
 									}
 
 								}
-								else if(local.get(k) instanceof TileGroup&&local.get(l) instanceof Hole)
+								else if(local.get(k) instanceof Tile &&local.get(l) instanceof Hole)
 								{
-									int tileNumberOfElem = ((TileGroup)local.get(k)).getNumberOfElements();
+									int tileNumberOfElem = ((Tile)local.get(k)).getNumberOfElements();
 									int holeDepth = ((Hole)local.get(l)).getDepth();
 									if(Objects.equals(local.get(k).getColor(), local.get(l).getColor())){
 										agentsData.get(local.get(l).getColor()).setScore(agentsData.get(local.get(l).getColor()).getScore()+10);
@@ -120,7 +166,7 @@ public class Environment
 									if(tileNumberOfElem>=holeDepth){
 										tileNumberOfElem = tileNumberOfElem - holeDepth;
 										((Hole)cells[i][j].getCellContents().get(l)).setDepth(0);
-										((TileGroup)cells[i][j].getCellContents().get(k)).setNumberOfElements(tileNumberOfElem);
+										((Tile)cells[i][j].getCellContents().get(k)).setNumberOfElements(tileNumberOfElem);
 										if(Objects.equals(local.get(k).getColor(), local.get(l).getColor())) {
 											agentsData.get(local.get(l).getColor()).setScore(agentsData.get(local.get(l).getColor()).getScore() + 40);
 										}
@@ -128,15 +174,15 @@ public class Environment
 									else{
 										holeDepth = holeDepth-tileNumberOfElem;
 										((Hole)cells[i][j].getCellContents().get(l)).setDepth(holeDepth);
-										((TileGroup)cells[i][j].getCellContents().get(k)).setNumberOfElements(0);
+										((Tile)cells[i][j].getCellContents().get(k)).setNumberOfElements(0);
 									}
 
 								}
 							}
-							else if (local.get(k) instanceof TileGroup && local.get(l) instanceof TileGroup && Objects.equals(local.get(k).getColor(), local.get(l).getColor())){
-								int numOfElem = ((TileGroup) local.get(k)).getNumberOfElements() + ((TileGroup) local.get(l)).getNumberOfElements();
-								((TileGroup)cells[i][j].getCellContents().get(l)).setNumberOfElements(0);
-								((TileGroup)cells[i][j].getCellContents().get(k)).setNumberOfElements(numOfElem);
+							else if (local.get(k) instanceof Tile && local.get(l) instanceof Tile && Objects.equals(local.get(k).getColor(), local.get(l).getColor())){
+								int numOfElem = ((Tile) local.get(k)).getNumberOfElements() + ((Tile) local.get(l)).getNumberOfElements();
+								((Tile)cells[i][j].getCellContents().get(l)).setNumberOfElements(0);
+								((Tile)cells[i][j].getCellContents().get(k)).setNumberOfElements(numOfElem);
 							}
 						}
 					}
@@ -150,8 +196,8 @@ public class Environment
 				for (CellContent cc:local)
 				{
 					if(!(cc instanceof Obstacle)) {
-						if (cc instanceof TileGroup){
-							if (((TileGroup) cc).getNumberOfElements() <= 0) {
+						if (cc instanceof Tile){
+							if (((Tile) cc).getNumberOfElements() <= 0) {
 								cells[i][j].getCellContents().remove(cc);
 							}
 						}

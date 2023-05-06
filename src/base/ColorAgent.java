@@ -5,7 +5,7 @@ import jade.domain.FIPAAgentManagement.DFAgentDescription;
 import jade.domain.FIPAAgentManagement.ServiceDescription;
 import jade.domain.FIPAException;
 
-public class ColorAgent {
+public class ColorAgent {//extends Agent{
 //    private static final long serialVersionUID = 5088484951993491457L;
 //
 //    @Override
