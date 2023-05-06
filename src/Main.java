@@ -1,7 +1,5 @@
 import base.*;
 
-import static java.lang.System.exit;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -69,7 +67,7 @@ public class Main {
                     tempColor = input.next();
                     tempX = Integer.valueOf(input.next());
                     tempY = Integer.valueOf(input.next());
-                    environment.getCell(tempX, tempY).addContent(new TileGroup(tempColor, numberInGroup));
+                    environment.getCell(tempX, tempY).addContent(new Tile(tempColor, numberInGroup));
                 }
             }
         }

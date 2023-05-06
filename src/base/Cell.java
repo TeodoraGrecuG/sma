@@ -1,9 +1,7 @@
 package base;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Objects;
 
 public class Cell {
     int visualSize;
@@ -78,8 +76,8 @@ public class Cell {
                 toPrint.add("|@"+String.format("%2d",((Hole)cc).getDepth()) + ((Hole)cc).getColor().charAt(0));
                 j++;
             }
-            if(cc instanceof TileGroup){
-                toPrint.add("|E"+String.format("%2d",((TileGroup) cc).getNumberOfElements())+((TileGroup) cc).getColor().charAt(0));
+            if(cc instanceof Tile){
+                toPrint.add("|E"+String.format("%2d",((Tile) cc).getNumberOfElements())+((Tile) cc).getColor().charAt(0));
                 j++;
             }
             if(cc instanceof Obstacle){
