@@ -59,7 +59,7 @@ public class SlaveContainerLauncher
 			String tempColor;
 			String tempX;
 			String tempY;
-			String[] argsToPass=new String[3];
+			String[] argsToPass=new String[4];
 			List<String> colors=new ArrayList<>();
 
 			if(args.length<1){
@@ -93,6 +93,7 @@ public class SlaveContainerLauncher
 				argsToPass[0]=tempX;
 				argsToPass[1]=tempY;
 				argsToPass[2]=colors.get(i);
+				argsToPass[3]=String.valueOf(colors.size());
 
 				AgentController colorAgent = secondaryContainer.createNewAgent(colors.get(i),
 						ColorAgent.class.getName(), argsToPass);

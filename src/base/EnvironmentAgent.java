@@ -1,6 +1,8 @@
 package base;
 
+import jade.core.AID;
 import jade.core.Agent;
+import jade.core.behaviours.ParallelBehaviour;
 import jade.domain.DFService;
 import jade.domain.FIPAAgentManagement.DFAgentDescription;
 import jade.domain.FIPAAgentManagement.ServiceDescription;
@@ -16,8 +18,9 @@ import java.util.Scanner;
 public class EnvironmentAgent extends Agent {
     private static final long serialVersionUID = 5088484951993491458L;
     Environment environment;
+    List<AID> colorAgents;
 
-    void setEnvironment(String [] args)
+    int setEnvironment(String [] args)
     {
         String filename = "tests/system__default.txt";
 
@@ -105,13 +108,15 @@ public class EnvironmentAgent extends Agent {
         }
 
         environment.clean();
+        return colors.size();
     }
 
     @Override
     public void setup() {
         Object[] args = getArguments();
         environment = new Environment();
-        setEnvironment((String[]) args);
+        int numOfColors = setEnvironment((String[]) args);
+        colorAgents = new ArrayList<>();
 
         // Register the ambient-agent service in the yellow pages
         DFAgentDescription dfd = new DFAgentDescription();
@@ -126,8 +131,23 @@ public class EnvironmentAgent extends Agent {
         } catch (FIPAException fe) {
             fe.printStackTrace();
         }
+        addBehaviour(new DiscoverEnvironmentAndColleaguesBehaviour(this, ParallelBehaviour.WHEN_ALL, numOfColors));
+        //environment.print();
+    }
 
-        environment.print();
+    public void addServiceAgent(String serviceType, AID agent, int numOfColors)
+    {
+        if(serviceType.equals(ServiceType.COLOR_AGENT))
+        {
+            colorAgents.add(agent);
+        }
+
+        if(colorAgents.size()>=numOfColors)
+            onDiscoveryCompleted();
+    }
+
+    private void onDiscoveryCompleted() {
+        Log.log(this, "color discovery completed" + colorAgents);
     }
 
     @Override
