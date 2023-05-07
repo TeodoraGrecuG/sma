@@ -1,5 +1,6 @@
 package base;
 
+import jade.core.AID;
 import jade.core.Agent;
 import jade.core.behaviours.ParallelBehaviour;
 import jade.domain.DFService;
@@ -17,6 +18,7 @@ import java.util.Scanner;
 public class EnvironmentAgent extends Agent {
     private static final long serialVersionUID = 5088484951993491458L;
     Environment environment;
+    List<AID> colorAgents;
 
     int setEnvironment(String [] args)
     {
@@ -114,6 +116,7 @@ public class EnvironmentAgent extends Agent {
         Object[] args = getArguments();
         environment = new Environment();
         int numOfColors = setEnvironment((String[]) args);
+        colorAgents = new ArrayList<>();
 
         // Register the ambient-agent service in the yellow pages
         DFAgentDescription dfd = new DFAgentDescription();
@@ -128,8 +131,23 @@ public class EnvironmentAgent extends Agent {
         } catch (FIPAException fe) {
             fe.printStackTrace();
         }
-        //ddBehaviour(new DiscoverEnvironmentAndColleaguesBehaviour(this, ParallelBehaviour.WHEN_ALL, numOfColors));
+        addBehaviour(new DiscoverEnvironmentAndColleaguesBehaviour(this, ParallelBehaviour.WHEN_ALL, numOfColors));
         //environment.print();
+    }
+
+    public void addServiceAgent(String serviceType, AID agent, int numOfColors)
+    {
+        if(serviceType.equals(ServiceType.COLOR_AGENT))
+        {
+            colorAgents.add(agent);
+        }
+
+        if(colorAgents.size()>=numOfColors)
+            onDiscoveryCompleted();
+    }
+
+    private void onDiscoveryCompleted() {
+        Log.log(this, "color discovery completed" + colorAgents);
     }
 
     @Override

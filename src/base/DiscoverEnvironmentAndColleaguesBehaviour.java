@@ -12,6 +12,8 @@ import jade.lang.acl.ACLMessage;
 import jade.proto.SubscriptionInitiator;
 import jade.util.leap.Iterator;
 
+import java.util.Objects;
+
 public class DiscoverEnvironmentAndColleaguesBehaviour extends ParallelBehaviour{
     /**
      * The serial UID.
@@ -66,7 +68,11 @@ public class DiscoverEnvironmentAndColleaguesBehaviour extends ParallelBehaviour
 
     @Override
     public void onStart() {
-        ServiceNeed[] needs = new ServiceNeed[]{new ServiceNeed(ServiceType.COLOR_AGENT, numOfColors - 1),
+        ServiceNeed[] needs;
+        if(Objects.equals(myAgent.getName(), "environment@ami-agents"))
+            needs = new ServiceNeed[]{new ServiceNeed(ServiceType.COLOR_AGENT, numOfColors)};
+        else
+            needs = new ServiceNeed[]{new ServiceNeed(ServiceType.COLOR_AGENT, numOfColors),
                 new ServiceNeed(ServiceType.ENV_AGENT, 1)};
         //ServiceNeed need = new ServiceNeed(ServiceType.ENV_AGENT, 1);
 
@@ -103,10 +109,15 @@ public class DiscoverEnvironmentAndColleaguesBehaviour extends ParallelBehaviour
                                 // in the ambient-agent and preference-agent ones
                                 for (Iterator it = dfd.getAllServices(); it.hasNext(); ) {
                                     ServiceDescription sd = (ServiceDescription) it.next();
-                                    if (sd.getType().equals(need.serviceType)) {
-                                        Log.log(myAgent, need.serviceType, "service found: Service \"", sd.getName(),
-                                                "\" provided by agent ", provider.getName());
+                                    if (sd.getType().equals(need.serviceType) && !Objects.equals(myAgent.getName(), provider.getName())&& !Objects.equals(myAgent.getName(), "environment@ami-agents")) {
+                                        Log.log(myAgent, need.serviceType, "service found: Service provided by agent ", provider.getName());
                                         ((ColorAgent) myAgent).addServiceAgent(need.serviceType, provider,numOfColors);
+                                        need.foundSoFar++;
+                                    }
+                                    else if(Objects.equals(myAgent.getName(), "environment@ami-agents")&&sd.getType().equals(need.serviceType))
+                                    {
+                                        Log.log(myAgent, need.serviceType, "service found: Service provided by agent ", provider.getName());
+                                        ((EnvironmentAgent) myAgent).addServiceAgent(need.serviceType, provider, numOfColors);
                                         need.foundSoFar++;
                                     }
                                 }

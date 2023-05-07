@@ -39,10 +39,10 @@ public class ColorAgent extends Agent{
         }
 
         colleagues = new ArrayList<>();
-        addBehaviour(new DiscoverEnvironmentAndColleaguesBehaviour(this, ParallelBehaviour.WHEN_ALL, Integer.valueOf((String)args[3])));
+        addBehaviour(new DiscoverEnvironmentAndColleaguesBehaviour(this, ParallelBehaviour.WHEN_ALL, Integer.valueOf((String)args[3])-1));
     }
     protected void onDiscoveryCompleted() {
-        Log.log(this, "color discovery completed");
+        Log.log(this, "color discovery completed" + colleagues);
     }
     public void addServiceAgent(String serviceType, AID agent, int numOfColors)
     {
