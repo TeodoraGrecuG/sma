@@ -59,7 +59,7 @@ public class SlaveContainerLauncher
 			String tempColor;
 			String tempX;
 			String tempY;
-			String[] argsToPass=new String[4];
+			String[] argsToPass;
 			List<String> colors=new ArrayList<>();
 
 			if(args.length<1){
@@ -88,6 +88,7 @@ public class SlaveContainerLauncher
 			}
 
 			for(int i=0;i<numberOfAgents;i++){
+				argsToPass = new String[4];
 				tempX = input.next();
 				tempY = input.next();
 				argsToPass[0]=tempX;

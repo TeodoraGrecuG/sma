@@ -2,6 +2,10 @@ package base;
 
 public class Tile extends CellContent{
     String color;
+    /**
+     * numberOfElements == 0 means that the tile is empty <br>
+     * numberOfElements > 0 means that the tile is full
+     */
     int numberOfElements;
 
     public Tile(String color) {

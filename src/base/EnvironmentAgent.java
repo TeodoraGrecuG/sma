@@ -4,9 +4,14 @@ import jade.core.AID;
 import jade.core.Agent;
 import jade.core.behaviours.ParallelBehaviour;
 import jade.domain.DFService;
-import jade.domain.FIPAAgentManagement.DFAgentDescription;
-import jade.domain.FIPAAgentManagement.ServiceDescription;
+import jade.domain.FIPAAgentManagement.*;
 import jade.domain.FIPAException;
+import jade.domain.FIPANames;
+import jade.lang.acl.ACLMessage;
+import jade.lang.acl.MessageTemplate;
+import jade.proto.AchieveREResponder;
+import org.json.simple.JSONObject;
+import org.json.simple.JSONValue;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -148,6 +153,520 @@ public class EnvironmentAgent extends Agent {
 
     private void onDiscoveryCompleted() {
         Log.log(this, "color discovery completed" + colorAgents);
+
+
+        MessageTemplate template = MessageTemplate.and(
+                MessageTemplate.MatchProtocol(FIPANames.InteractionProtocol.FIPA_REQUEST),
+                MessageTemplate.MatchPerformative(ACLMessage.REQUEST) );
+
+        addBehaviour(new AchieveREResponder(this, template) {
+            protected ACLMessage prepareResponse(ACLMessage request) throws NotUnderstoodException, RefuseException {
+                System.out.println("Agent " + getLocalName() + ": REQUEST received from " +
+                        request.getSender().getName() + ". Action is " + request.getContent());
+
+                Object obj = JSONValue.parse(request.getContent());
+                JSONObject jsonObject = (JSONObject) obj;
+
+                String action = (String) jsonObject.get("action");
+
+                ACLMessage agree = request.createReply();
+                switch (action) {
+                    case "pick": {
+                        String color = (String) jsonObject.get("color");
+                        int x = ((Long) jsonObject.get("Current x")).intValue();
+                        int y = ((Long) jsonObject.get("Current y")).intValue();
+                        if (environment.getCell(x, y).getCellContents() != null) {
+                            for (CellContent cellContent : environment.getCell(x, y).getCellContents()) {
+                                if (cellContent instanceof Tile) {
+                                    if (cellContent.getColor().equals(color)) {
+                                        environment.getCell(x, y).removeContent(cellContent);
+                                        agree.setPerformative(ACLMessage.AGREE);
+                                    }
+                                }
+                            }
+                        }
+                        break;
+                    }
+                    case "drop_tile": {
+                        int x = ((Long) jsonObject.get("Current x")).intValue();
+                        int y = ((Long) jsonObject.get("Current y")).intValue();
+                        if (environment.getCell(x,y).getCellContents() != null) {
+                            for (CellContent cellContent : environment.getCell(x, y).getCellContents()) {
+                                if (cellContent instanceof Tile) {
+                                    if (cellContent.getColor().equals((String) jsonObject.get("color"))) {
+                                        ((Tile) cellContent).numberOfElements += 1;
+                                        agree.setPerformative(ACLMessage.AGREE);
+                                        break;
+                                    }
+                                }
+                            }
+                            environment.getCell(x,y).addContent(new Tile((String) jsonObject.get("color"),1));
+                            agree.setPerformative(ACLMessage.AGREE);
+                        }
+                        break;
+                    }
+                    case "move": {
+                        String direction = (String) jsonObject.get("direction");
+                        int x = ((Long) jsonObject.get("Current x")).intValue();
+                        int y = ((Long) jsonObject.get("Current y")).intValue();
+                        switch (direction) {
+                            case "North": {
+                                if (y - 1 >= 0) {
+                                    for (CellContent cellContent : environment.getCell(x, y - 1).getCellContents()) {
+                                        if (cellContent instanceof Obstacle) {
+                                            System.out.println("Agent " + getLocalName() + ": Refuse");
+                                            throw new RefuseException("check-failed");
+                                        } else if (cellContent instanceof Hole) {
+                                            if (((Hole) cellContent).depth == 0) {
+                                                agree.setPerformative(ACLMessage.AGREE);
+                                                break;
+                                            } else {
+                                                System.out.println("Agent " + getLocalName() + ": Refuse");
+                                                throw new RefuseException("check-failed");
+                                            }
+                                        }
+                                    }
+                                    agree.setPerformative(ACLMessage.AGREE);
+                                    break;
+                                } else {
+                                    System.out.println("Agent " + getLocalName() + ": Refuse");
+                                    throw new RefuseException("check-failed");
+                                }
+                            }
+                            case "South": {
+                                if (y + 1 <= environment.height - 1) {
+                                    for (CellContent cellContent : environment.getCell(x, y + 1).getCellContents()) {
+                                        if (cellContent instanceof Obstacle) {
+                                            System.out.println("Agent " + getLocalName() + ": Refuse");
+                                            throw new RefuseException("check-failed");
+                                        } else if (cellContent instanceof Hole) {
+                                            if (((Hole) cellContent).depth == 0) {
+                                                agree.setPerformative(ACLMessage.AGREE);
+                                                break;
+                                            } else {
+                                                System.out.println("Agent " + getLocalName() + ": Refuse");
+                                                throw new RefuseException("check-failed");
+                                            }
+                                        }
+                                    }
+                                    agree.setPerformative(ACLMessage.AGREE);
+                                    break;
+                                } else {
+                                    System.out.println("Agent " + getLocalName() + ": Refuse");
+                                    throw new RefuseException("check-failed");
+                                }
+                            }
+                            case "East": {
+                                if (x + 1 <= environment.width - 1) {
+                                    for (CellContent cellContent : environment.getCell(x + 1, y).getCellContents()) {
+                                        if (cellContent instanceof Obstacle) {
+                                            System.out.println("Agent " + getLocalName() + ": Refuse");
+                                            throw new RefuseException("check-failed");
+                                        } else if (cellContent instanceof Hole) {
+                                            if (((Hole) cellContent).depth == 0) {
+                                                agree.setPerformative(ACLMessage.AGREE);
+                                                break;
+                                            } else {
+                                                System.out.println("Agent " + getLocalName() + ": Refuse");
+                                                throw new RefuseException("check-failed");
+                                            }
+                                        }
+                                    }
+                                    agree.setPerformative(ACLMessage.AGREE);
+                                    break;
+                                } else {
+                                    System.out.println("Agent " + getLocalName() + ": Refuse");
+                                    throw new RefuseException("check-failed");
+                                }
+                            }
+                            case "West": {
+                                if (x - 1 >= 0) {
+                                    for (CellContent cellContent : environment.getCell(x - 1, y).getCellContents()) {
+                                        if (cellContent instanceof Obstacle) {
+                                            System.out.println("Agent " + getLocalName() + ": Refuse");
+                                            throw new RefuseException("check-failed");
+                                        } else if (cellContent instanceof Hole) {
+                                            if (((Hole) cellContent).depth == 0) {
+                                                agree.setPerformative(ACLMessage.AGREE);
+                                                break;
+                                            } else {
+                                                System.out.println("Agent " + getLocalName() + ": Refuse");
+                                                throw new RefuseException("check-failed");
+                                            }
+                                        }
+                                    }
+                                    agree.setPerformative(ACLMessage.AGREE);
+                                    break;
+                                } else {
+                                    System.out.println("Agent " + getLocalName() + ": Refuse");
+                                    throw new RefuseException("check-failed");
+                                }
+                            }
+                        }
+                        break;
+                    }
+                    case "use_tile": {
+                        String direction = (String) jsonObject.get("direction");
+                        String tile_color = (String) jsonObject.get("color");
+                        int x = ((Long) jsonObject.get("Current x")).intValue();
+                        int y = ((Long) jsonObject.get("Current y")).intValue();
+
+                        switch (direction) {
+                            case "North": {
+                                if (y - 1 >= 0) {
+                                    for (CellContent cellContent : environment.getCell(x, y - 1).getCellContents()) {
+                                        if (cellContent instanceof Hole) {
+                                            if (((Hole) cellContent).depth < 0) {
+                                                if (((Hole) cellContent).color.equals(tile_color)) {
+                                                    environment.getColorAgentData(((Hole) cellContent).color).
+                                                            setScore(environment.getColorAgentData(((Hole) cellContent).color).
+                                                                    getScore() + 10);
+                                                }
+                                                if (((Hole) cellContent).color.equals(tile_color) &&
+                                                        ((Hole) cellContent).depth == -1) {
+                                                    environment.getColorAgentData(((Hole) cellContent).color).
+                                                            setScore(environment.getColorAgentData(((Hole) cellContent).color).
+                                                                    getScore() + 40);
+                                                }
+                                                agree.setPerformative(ACLMessage.AGREE);
+                                            }
+                                        }
+                                    }
+                                } else {
+                                    System.out.println("Agent " + getLocalName() + ": Refuse");
+                                    throw new RefuseException("check-failed");
+                                }
+                            }
+                            case "South": {
+                                if (y + 1 <= environment.height - 1) {
+                                    for (CellContent cellContent : environment.getCell(x, y + 1).getCellContents()) {
+                                        if (cellContent instanceof Hole) {
+                                            if (((Hole) cellContent).depth < 0) {
+                                                if (((Hole) cellContent).color.equals(tile_color)) {
+                                                    environment.getColorAgentData(((Hole) cellContent).color).
+                                                            setScore(environment.getColorAgentData(((Hole) cellContent).color).
+                                                                    getScore() + 10);
+                                                }
+                                                if (((Hole) cellContent).color.equals(tile_color) &&
+                                                        ((Hole) cellContent).depth == -1) {
+                                                    environment.getColorAgentData(((Hole) cellContent).color).
+                                                            setScore(environment.getColorAgentData(((Hole) cellContent).color).
+                                                                    getScore() + 40);
+                                                }
+                                                agree.setPerformative(ACLMessage.AGREE);
+                                            }
+                                        }
+                                    }
+                                } else {
+                                    System.out.println("Agent " + getLocalName() + ": Refuse");
+                                    throw new RefuseException("check-failed");
+                                }
+                            }
+                            case "East": {
+                                if (x + 1 <= environment.width - 1) {
+                                    for (CellContent cellContent : environment.getCell(x + 1, y).getCellContents()) {
+                                        if (cellContent instanceof Hole) {
+                                            if (((Hole) cellContent).depth < 0) {
+                                                if (((Hole) cellContent).color.equals(tile_color)) {
+                                                    environment.getColorAgentData(((Hole) cellContent).color).
+                                                            setScore(environment.getColorAgentData(((Hole) cellContent).color).
+                                                                    getScore() + 10);
+                                                }
+                                                if (((Hole) cellContent).color.equals(tile_color) &&
+                                                        ((Hole) cellContent).depth == -1) {
+                                                    environment.getColorAgentData(((Hole) cellContent).color).
+                                                            setScore(environment.getColorAgentData(((Hole) cellContent).color).
+                                                                    getScore() + 40);
+                                                }
+                                                agree.setPerformative(ACLMessage.AGREE);
+                                            }
+                                        }
+                                    }
+                                } else {
+                                    System.out.println("Agent " + getLocalName() + ": Refuse");
+                                    throw new RefuseException("check-failed");
+                                }
+                            }
+                            case "West": {
+                                if (x - 1 >= 0) {
+                                    for (CellContent cellContent : environment.getCell(x - 1, y).getCellContents()) {
+                                        if (cellContent instanceof Hole) {
+                                            if (((Hole) cellContent).depth < 0) {
+                                                if (((Hole) cellContent).color.equals(tile_color)) {
+                                                    environment.getColorAgentData(((Hole) cellContent).color).
+                                                            setScore(environment.getColorAgentData(((Hole) cellContent).color).
+                                                                    getScore() + 10);
+                                                }
+                                                if (((Hole) cellContent).color.equals(tile_color) &&
+                                                        ((Hole) cellContent).depth == -1) {
+                                                    environment.getColorAgentData(((Hole) cellContent).color).
+                                                            setScore(environment.getColorAgentData(((Hole) cellContent).color).
+                                                                    getScore() + 40);
+                                                }
+                                                agree.setPerformative(ACLMessage.AGREE);
+                                            }
+                                        }
+                                    }
+                                } else {
+                                    System.out.println("Agent " + getLocalName() + ": Refuse");
+                                    throw new RefuseException("check-failed");
+                                }
+                            }
+                        }
+
+                        break;
+                    }
+                    case "transfer_points": {
+                        int points = ((Long) jsonObject.get("points")).intValue();
+                        ColorAgentData agent = ((ColorAgentData) jsonObject.get("agent"));
+
+                        agree.setPerformative(ACLMessage.AGREE);
+                        environment.getColorAgentData(agent.getColor()).
+                                setScore(environment.getColorAgentData(agent.getColor()).getScore() + points);
+                        break;
+                    }
+                    default:
+                        System.out.println("Agent " + getLocalName() + ": Refuse");
+                        throw new RefuseException("check-failed");
+                }
+
+                return agree;
+            }
+
+            protected ACLMessage prepareResultNotification(ACLMessage request, ACLMessage response) throws FailureException {
+                Object obj = JSONValue.parse(request.getContent());
+                JSONObject jsonObject = (JSONObject) obj;
+
+                String action = (String) jsonObject.get("action");
+
+                ACLMessage inform = request.createReply();
+                switch (action) {
+                    case "pick": {
+                        String color = (String) jsonObject.get("color");
+                        int x = ((Long) jsonObject.get("Current x")).intValue();
+                        int y = ((Long) jsonObject.get("Current y")).intValue();
+                        if (environment.getCell(x, y).getCellContents() != null) {
+                            for (CellContent cellContent : environment.getCell(x, y).getCellContents()) {
+                                if (cellContent instanceof Tile) {
+                                    if (cellContent.getColor().equals(color)) {
+                                        inform.setPerformative(ACLMessage.INFORM);
+                                        inform.setContent("removed");
+                                    }
+                                }
+                            }
+                        }
+                        break;
+                    }
+                    case "drop_tile": {
+                        int x = ((Long) jsonObject.get("Current x")).intValue();
+                        int y = ((Long) jsonObject.get("Current y")).intValue();
+                        if (environment.getCell(x,y).getCellContents() != null) {
+                            for (CellContent cellContent : environment.getCell(x, y).getCellContents()) {
+                                if (cellContent instanceof Tile) {
+                                    if (cellContent.getColor().equals((String) jsonObject.get("color"))) {
+                                        inform.setPerformative(ACLMessage.INFORM);
+                                        inform.setContent("dropped on same tiles");
+                                        break;
+                                    }
+                                }
+                            }
+                            inform.setPerformative(ACLMessage.INFORM);
+                            inform.setContent("formed new tile");
+                        }
+                        break;
+                    }
+                    case "move": {
+                        String direction = (String) jsonObject.get("direction");
+                        int x = ((Long) jsonObject.get("Current x")).intValue();
+                        int y = ((Long) jsonObject.get("Current y")).intValue();
+                        switch (direction) {
+                            case "North": {
+                                if (y - 1 >= 0) {
+                                    for (CellContent cellContent : environment.getCell(x, y - 1).getCellContents()) {
+                                        if (cellContent instanceof Obstacle) {
+                                            System.out.println("Agent "+getLocalName()+": Action failed");
+                                            throw new FailureException("unexpected-error");
+                                        } else if (cellContent instanceof Hole) {
+                                            if (((Hole) cellContent).depth == 0) {
+                                                inform.setPerformative(ACLMessage.INFORM);
+                                                inform.setContent("moved");
+                                                break;
+                                            } else {
+                                                System.out.println("Agent "+getLocalName()+": Action failed");
+                                                throw new FailureException("unexpected-error");
+                                            }
+                                        }
+                                    }
+                                    inform.setPerformative(ACLMessage.INFORM);
+                                    inform.setContent("moved");
+                                } else {
+                                    System.out.println("Agent "+getLocalName()+": Action failed");
+                                    throw new FailureException("unexpected-error");
+                                }
+                            }
+                            case "South": {
+                                if (y + 1 <= environment.height - 1) {
+                                    for (CellContent cellContent : environment.getCell(x, y + 1).getCellContents()) {
+                                        if (cellContent instanceof Obstacle) {
+                                            System.out.println("Agent "+getLocalName()+": Action failed");
+                                            throw new FailureException("unexpected-error");
+                                        } else if (cellContent instanceof Hole) {
+                                            if (((Hole) cellContent).depth == 0) {
+                                                inform.setPerformative(ACLMessage.INFORM);
+                                                inform.setContent("moved");
+                                                break;
+                                            } else {
+                                                System.out.println("Agent "+getLocalName()+": Action failed");
+                                                throw new FailureException("unexpected-error");
+                                            }
+                                        }
+                                    }
+                                    inform.setPerformative(ACLMessage.INFORM);
+                                    inform.setContent("moved");
+                                } else {
+                                    System.out.println("Agent "+getLocalName()+": Action failed");
+                                    throw new FailureException("unexpected-error");
+                                }
+                            }
+                            case "East": {
+                                if (x + 1 <= environment.width - 1) {
+                                    for (CellContent cellContent : environment.getCell(x + 1, y).getCellContents()) {
+                                        if (cellContent instanceof Obstacle) {
+                                            System.out.println("Agent "+getLocalName()+": Action failed");
+                                            throw new FailureException("unexpected-error");
+                                        } else if (cellContent instanceof Hole) {
+                                            if (((Hole) cellContent).depth == 0) {
+                                                inform.setPerformative(ACLMessage.INFORM);
+                                                inform.setContent("moved");
+                                                break;
+                                            } else {
+                                                System.out.println("Agent "+getLocalName()+": Action failed");
+                                                throw new FailureException("unexpected-error");
+                                            }
+                                        }
+                                    }
+                                    inform.setPerformative(ACLMessage.INFORM);
+                                    inform.setContent("moved");
+                                } else {
+                                    System.out.println("Agent "+getLocalName()+": Action failed");
+                                    throw new FailureException("unexpected-error");
+                                }
+                            }
+                            case "West": {
+                                if (x - 1 >= 0) {
+                                    for (CellContent cellContent : environment.getCell(x - 1, y).getCellContents()) {
+                                        if (cellContent instanceof Obstacle) {
+                                            System.out.println("Agent "+getLocalName()+": Action failed");
+                                            throw new FailureException("unexpected-error");
+                                        } else if (cellContent instanceof Hole) {
+                                            if (((Hole) cellContent).depth == 0) {
+                                                inform.setPerformative(ACLMessage.INFORM);
+                                                inform.setContent("moved");
+                                                break;
+                                            } else {
+                                                System.out.println("Agent "+getLocalName()+": Action failed");
+                                                throw new FailureException("unexpected-error");
+                                            }
+                                        }
+                                    }
+                                    inform.setPerformative(ACLMessage.INFORM);
+                                    inform.setContent("moved");
+                                } else {
+                                    System.out.println("Agent "+getLocalName()+": Action failed");
+                                    throw new FailureException("unexpected-error");
+                                }
+                            }
+                        }
+                        break;
+                    }
+                    case "use_tile": {
+                        String direction = (String) jsonObject.get("direction");
+                        String tile_color = (String) jsonObject.get("color");
+                        int x = ((Long) jsonObject.get("Current x")).intValue();
+                        int y = ((Long) jsonObject.get("Current y")).intValue();
+
+                        switch (direction) {
+                            case "North": {
+                                if (y - 1 >= 0) {
+                                    for (CellContent cellContent : environment.getCell(x, y - 1).getCellContents()) {
+                                        if (cellContent instanceof Hole) {
+                                            if (((Hole) cellContent).depth < 0) {
+                                                inform.setPerformative(ACLMessage.INFORM);
+                                                inform.setContent("tile was used");
+                                            }
+                                        }
+                                    }
+                                } else {
+                                    System.out.println("Agent "+getLocalName()+": Action failed");
+                                    throw new FailureException("unexpected-error");
+                                }
+                            }
+                            case "South": {
+                                if (y + 1 <= environment.height - 1) {
+                                    for (CellContent cellContent : environment.getCell(x, y + 1).getCellContents()) {
+                                        if (cellContent instanceof Hole) {
+                                            if (((Hole) cellContent).depth < 0) {
+                                                inform.setPerformative(ACLMessage.INFORM);
+                                                inform.setContent("tile was used");
+                                            }
+                                        }
+                                    }
+                                } else {
+                                    System.out.println("Agent "+getLocalName()+": Action failed");
+                                    throw new FailureException("unexpected-error");
+                                }
+                            }
+                            case "East": {
+                                if (x + 1 <= environment.width - 1) {
+                                    for (CellContent cellContent : environment.getCell(x + 1, y).getCellContents()) {
+                                        if (cellContent instanceof Hole) {
+                                            if (((Hole) cellContent).depth < 0) {
+                                                inform.setPerformative(ACLMessage.INFORM);
+                                                inform.setContent("tile was used");
+                                            }
+                                        }
+                                    }
+                                } else {
+                                    System.out.println("Agent "+getLocalName()+": Action failed");
+                                    throw new FailureException("unexpected-error");
+                                }
+                            }
+                            case "West": {
+                                if (x - 1 >= 0) {
+                                    for (CellContent cellContent : environment.getCell(x - 1, y).getCellContents()) {
+                                        if (cellContent instanceof Hole) {
+                                            if (((Hole) cellContent).depth < 0) {
+                                                inform.setPerformative(ACLMessage.INFORM);
+                                                inform.setContent("tile was used");
+                                            }
+                                        }
+                                    }
+                                } else {
+                                    System.out.println("Agent "+getLocalName()+": Action failed");
+                                    throw new FailureException("unexpected-error");
+                                }
+                            }
+                        }
+
+                        break;
+                    }
+                    case "transfer_points": {
+                        int points = ((Long) jsonObject.get("points")).intValue();
+                        ColorAgentData agent = ((ColorAgentData) jsonObject.get("agent"));
+
+                        inform.setPerformative(ACLMessage.INFORM);
+                        inform.setContent("points were transferred");
+                        break;
+                    }
+                    default:
+                        System.out.println("Agent "+getLocalName()+": Action failed");
+                        throw new FailureException("unexpected-error");
+                }
+
+                return inform;
+            }
+        } );
+
     }
 
     @Override

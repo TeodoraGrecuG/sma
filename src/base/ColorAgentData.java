@@ -5,6 +5,7 @@ public class ColorAgentData {
     int y;
     String color;
     int score;
+    Tile tile;
 
     public ColorAgentData(){
         ;
@@ -14,11 +15,19 @@ public class ColorAgentData {
         this.y = y;
         this.color = color;
         score=0;
+
+        tile = new Tile();
+        tile.color = "";
+        tile.numberOfElements = 0;
     }
 
     public ColorAgentData(String color) {
         this.color = color;
         score=0;
+
+        tile = new Tile();
+        tile.color = "";
+        tile.numberOfElements = 0;
     }
 
     public int getX() {
@@ -51,5 +60,13 @@ public class ColorAgentData {
 
     public void setColor(String color) {
         this.color = color;
+    }
+
+    public Tile getTile() {
+        return tile;
+    }
+
+    public void setTile(Tile tile) {
+        this.tile = tile;
     }
 }
