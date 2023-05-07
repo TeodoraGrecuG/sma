@@ -127,7 +127,7 @@ public class EnvironmentAgent extends Agent {
             fe.printStackTrace();
         }
 
-        environment.print();
+        //environment.print();
     }
 
     @Override
