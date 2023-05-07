@@ -7,6 +7,7 @@ import jade.domain.FIPAAgentManagement.DFAgentDescription;
 import jade.domain.FIPAAgentManagement.ServiceDescription;
 import jade.domain.FIPAException;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class ColorAgent extends Agent{
@@ -37,17 +38,23 @@ public class ColorAgent extends Agent{
             fe.printStackTrace();
         }
 
+        colleagues = new ArrayList<>();
         addBehaviour(new DiscoverEnvironmentAndColleaguesBehaviour(this, ParallelBehaviour.WHEN_ALL, Integer.valueOf((String)args[3])));
     }
     protected void onDiscoveryCompleted() {
         Log.log(this, "color discovery completed");
     }
-    public void addServiceAgent(String serviceType, AID agent)
+    public void addServiceAgent(String serviceType, AID agent, int numOfColors)
     {
         if(serviceType.equals(ServiceType.ENV_AGENT))
             environmentAgent = agent;
 
-        if(environmentAgent != null)
+        if(serviceType.equals(ServiceType.COLOR_AGENT))
+        {
+            colleagues.add(agent);
+        }
+
+        if(environmentAgent != null && colleagues.size()>=numOfColors)
             onDiscoveryCompleted();
     }
 

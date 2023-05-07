@@ -1,6 +1,7 @@
 package base;
 
 import jade.core.Agent;
+import jade.core.behaviours.ParallelBehaviour;
 import jade.domain.DFService;
 import jade.domain.FIPAAgentManagement.DFAgentDescription;
 import jade.domain.FIPAAgentManagement.ServiceDescription;
@@ -17,7 +18,7 @@ public class EnvironmentAgent extends Agent {
     private static final long serialVersionUID = 5088484951993491458L;
     Environment environment;
 
-    void setEnvironment(String [] args)
+    int setEnvironment(String [] args)
     {
         String filename = "tests/system__default.txt";
 
@@ -105,13 +106,14 @@ public class EnvironmentAgent extends Agent {
         }
 
         environment.clean();
+        return colors.size();
     }
 
     @Override
     public void setup() {
         Object[] args = getArguments();
         environment = new Environment();
-        setEnvironment((String[]) args);
+        int numOfColors = setEnvironment((String[]) args);
 
         // Register the ambient-agent service in the yellow pages
         DFAgentDescription dfd = new DFAgentDescription();
@@ -126,7 +128,7 @@ public class EnvironmentAgent extends Agent {
         } catch (FIPAException fe) {
             fe.printStackTrace();
         }
-
+        //ddBehaviour(new DiscoverEnvironmentAndColleaguesBehaviour(this, ParallelBehaviour.WHEN_ALL, numOfColors));
         //environment.print();
     }
 

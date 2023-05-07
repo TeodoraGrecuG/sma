@@ -106,7 +106,7 @@ public class DiscoverEnvironmentAndColleaguesBehaviour extends ParallelBehaviour
                                     if (sd.getType().equals(need.serviceType)) {
                                         Log.log(myAgent, need.serviceType, "service found: Service \"", sd.getName(),
                                                 "\" provided by agent ", provider.getName());
-                                        ((ColorAgent) myAgent).addServiceAgent(need.serviceType, provider);
+                                        ((ColorAgent) myAgent).addServiceAgent(need.serviceType, provider,numOfColors);
                                         need.foundSoFar++;
                                     }
                                 }
