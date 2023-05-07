@@ -21,7 +21,7 @@ public class MainContainerLauncher {
 	/**
 	 * Configures and launches the main container.
 	 */
-	void setupPlatform() {
+	public void setupPlatform() {
 		Properties mainProps = new ExtendedProperties();
 		mainProps.setProperty(Profile.GUI, "true"); // start the JADE GUI
 		mainProps.setProperty(Profile.MAIN, "true"); // is main container
@@ -38,7 +38,7 @@ public class MainContainerLauncher {
 	/**
 	 * Starts the agents assigned to the main container.
 	 */
-	void startAgents(String[] args) {
+	public void startAgents(String[] args) {
 		try {
 			AgentController EnvAgentCtrl = mainContainer.createNewAgent("environment", EnvironmentAgent.class.getName(), args);
 			EnvAgentCtrl.start();
