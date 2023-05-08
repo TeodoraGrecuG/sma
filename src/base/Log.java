@@ -17,11 +17,11 @@ public class Log
 	 * @param output
 	 *            - components of the output.
 	 */
-	public static void log(Agent agent, Object... output)
+	public static String log(Agent agent, Object... output)
 	{
 		String out = agent.getLocalName() + ": ";
 		for(Object o : output)
 			out += (o != null ? o.toString() : "<null>") + " ";
-		System.out.println(out);
+		return out;
 	}
 }

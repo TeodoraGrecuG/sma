@@ -13,6 +13,13 @@ public class Environment
 	HashMap<String,ColorAgentData> agentsData;
 	Cell[][] cells;
 
+	public HashMap<String, ColorAgentData> getColorAgentsData() {
+		return agentsData;
+	}
+
+	public void setColorAgentsData(HashMap<String, ColorAgentData> agentsData) {
+		this.agentsData = agentsData;
+	}
 
 	public Environment()
 	{
@@ -259,7 +266,12 @@ public class Environment
 
 		agentsData.forEach(
 				(key, value)
-						-> System.out.println(value.getColor() + " agent: " + value.getScore()+ " points"));
+						-> {
+					if(value.getTile().getNumberOfElements()==0)
+						System.out.println(value.getColor() + " agent: " + value.getScore()+ " points; carries nothing");
+					else
+						System.out.println(value.getColor() + " agent: " + value.getScore()+ " points; carries " + value.getTile().getColor());
+				});
 
 	}
 }

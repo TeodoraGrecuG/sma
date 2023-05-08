@@ -55,6 +55,11 @@ public class Cell {
         this.cellContents.add(cellContent);
     }
 
+    public void removeContent(CellContent cellContent) {
+        this.cellContents.remove(cellContent);
+    }
+
+
     public int computeVisualCellDim()
     {
         if(cellContents.isEmpty()|| cellContents.size()==1){
