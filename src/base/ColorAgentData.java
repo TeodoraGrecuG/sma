@@ -36,6 +36,11 @@ public class ColorAgentData {
         this.tile = tile;
     }
 
+    public void setTile(String color, int numberOfElements){
+        this.tile.setColor(color);
+        this.tile.setNumberOfElements(numberOfElements);
+    }
+
     public int getX() {
         return x;
     }
