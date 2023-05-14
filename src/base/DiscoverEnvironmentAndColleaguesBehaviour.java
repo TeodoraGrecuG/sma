@@ -77,7 +77,7 @@ public class DiscoverEnvironmentAndColleaguesBehaviour extends ParallelBehaviour
         //ServiceNeed need = new ServiceNeed(ServiceType.ENV_AGENT, 1);
 
         AID dfAgent = myAgent.getDefaultDF();
-        Log.log(myAgent, "Default DF Agent: " + dfAgent);
+        SingletoneBuffer.getInstance().addLogToPrint(Log.log(myAgent, "Default DF Agent: " + dfAgent));
         for(ServiceNeed need : needs)
         {
             // Build the DFAgentDescription which holds the service descriptions for the the ambient-agent service
@@ -98,7 +98,7 @@ public class DiscoverEnvironmentAndColleaguesBehaviour extends ParallelBehaviour
 
                 @Override
                 protected void handleInform(ACLMessage inform) {
-                    Log.log(myAgent, "Notification received from DF");
+                    SingletoneBuffer.getInstance().addLogToPrint(Log.log(myAgent, "Notification received from DF"));
 
                     try {
                         DFAgentDescription[] results = DFService.decodeNotification(inform.getContent());
@@ -110,13 +110,13 @@ public class DiscoverEnvironmentAndColleaguesBehaviour extends ParallelBehaviour
                                 for (Iterator it = dfd.getAllServices(); it.hasNext(); ) {
                                     ServiceDescription sd = (ServiceDescription) it.next();
                                     if (sd.getType().equals(need.serviceType) && !Objects.equals(myAgent.getName(), provider.getName())&& !Objects.equals(myAgent.getName(), "environment@ami-agents")) {
-                                        Log.log(myAgent, need.serviceType, "service found: Service provided by agent ", provider.getName());
+                                        SingletoneBuffer.getInstance().addLogToPrint(Log.log(myAgent, need.serviceType, "service found: Service provided by agent ", provider.getName()));
                                         ((ColorAgent) myAgent).addServiceAgent(need.serviceType, provider,numOfColors);
                                         need.foundSoFar++;
                                     }
                                     else if(Objects.equals(myAgent.getName(), "environment@ami-agents")&&sd.getType().equals(need.serviceType))
                                     {
-                                        Log.log(myAgent, need.serviceType, "service found: Service provided by agent ", provider.getName());
+                                        SingletoneBuffer.getInstance().addLogToPrint(Log.log(myAgent, need.serviceType, "service found: Service provided by agent ", provider.getName()));
                                         ((EnvironmentAgent) myAgent).addServiceAgent(need.serviceType, provider, numOfColors);
                                         need.foundSoFar++;
                                     }
@@ -128,6 +128,8 @@ public class DiscoverEnvironmentAndColleaguesBehaviour extends ParallelBehaviour
                             cancel(inform.getSender(), true);
                     } catch (FIPAException fe) {
                         fe.printStackTrace();
+                    } catch (InterruptedException e) {
+                        throw new RuntimeException(e);
                     }
                 }
             });
