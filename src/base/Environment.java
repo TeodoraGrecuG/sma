@@ -1,9 +1,10 @@
 package base;
 
+import java.io.Serializable;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
-public class Environment
+public class Environment implements Serializable
 {
 	int width;
 	int height;
