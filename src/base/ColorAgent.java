@@ -1,4 +1,5 @@
 package base;;
+import FIPA.FipaMessage;
 import jade.core.AID;
 import jade.core.Agent;
 import jade.core.behaviours.OneShotBehaviour;
@@ -10,15 +11,22 @@ import jade.domain.FIPAAgentManagement.ServiceDescription;
 import jade.domain.FIPAException;
 import jade.domain.FIPANames;
 import jade.lang.acl.ACLMessage;
+import jade.lang.acl.MessageTemplate;
+import jade.lang.acl.UnreadableException;
 import jade.proto.AchieveREInitiator;
 import org.json.simple.JSONObject;
 import org.json.simple.JSONValue;
 
+import javax.swing.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.*;
+import base.Templates.*;
 
 import java.util.*;
+import java.util.function.Function;
+
+import static base.Templates.*;
 
 public class ColorAgent extends Agent{
     private static final long serialVersionUID = 5088484951993491459L;
@@ -26,6 +34,8 @@ public class ColorAgent extends Agent{
     ColorAgentData colorAgentData;
     AID environmentAgent;
     List<AID> colleagues;
+
+    Environment envStatus = new Environment();
 
     @Override
     public void setup() {
@@ -52,8 +62,12 @@ public class ColorAgent extends Agent{
         addBehaviour(new DiscoverEnvironmentAndColleaguesBehaviour(this, ParallelBehaviour.WHEN_ALL, Integer.valueOf((String)args[3])-1));
     }
 
-    protected void responseInterpret(Agent agent, ACLMessage msg)
-    {
+    protected void handleContentObjectResponse(Agent myAgent, ACLMessage msg) throws UnreadableException {
+        SingletoneBuffer.getInstance().addLogToPrint(Log.log(myAgent, "environment provided its status"));
+        envStatus = (Environment) msg.getContentObject();
+    }
+
+    protected void responseInterpret(Agent agent, ACLMessage msg) throws UnreadableException {
         Object obj = JSONValue.parse(msg.getContent());
         JSONObject jsonObject = (JSONObject) obj;
         String response = (String) jsonObject.get("response");
@@ -98,21 +112,60 @@ public class ColorAgent extends Agent{
                 }
             }
         }
-        SingletoneBuffer.getInstance().addLogToPrint(Log.log(agent, ": environment " + response+" " + action + " "+(String) jsonObject.get("additional_info")));
+        else{
+            if(!Objects.equals(action, "env-status")){
+                this.getEnvStatus(templateEnvStatus,ACLMessage.REQUEST, Proctocols.ENV_STATUS);
+            }
+        }
+        SingletoneBuffer.getInstance().addLogToPrint(Log.log(agent, "environment " + response+" " + action + " "+(String) jsonObject.get("additional_info")));
     }
 
-    protected void performCommunication(JSONObject obj)
+    protected void listeningOtherAgents(){
+        addBehaviour(new SimpleBehaviour() {
+
+            @Override
+            public void action() {
+                ACLMessage msg = myAgent.receive(templateCommunicationBetweenAgents);
+                if (msg != null) {
+                    SingletoneBuffer.getInstance().addLogToPrint(Log.log(myAgent, msg.getSender().getLocalName() + " said: " + msg.getContent()));
+                }
+                else {
+                    block();
+                }
+            }
+            @Override
+            public boolean done() {
+                return false;
+            }
+        });
+    }
+
+    protected void sendActionToColleagues(String content)
+    {
+        ACLMessage msg = new ACLMessage(ACLMessage.INFORM);
+        msg.setProtocol(Proctocols.AGENT_AGENT);
+        msg.setConversationId("inform-" + this.getLocalName()+new Date());
+        msg.setContent(content);
+        for(AID aid: colleagues){
+            msg.addReceiver(aid);
+            this.send(msg);
+        }
+    }
+
+    protected void performCommunication(JSONObject obj, MessageTemplate template, int messageType, String protocol, boolean blocking)
     {
         addBehaviour(new OneShotBehaviour() {
             @Override
             public void action() {
-                ACLMessage msg = new ACLMessage(ACLMessage.REQUEST);
-                msg.setProtocol(FIPANames.InteractionProtocol.FIPA_REQUEST);
+                ACLMessage msg = new ACLMessage(messageType);
+                msg.setProtocol(protocol);
                 msg.setConversationId("inform-" + myAgent.getName()+new Date());
                 msg.addReceiver(environmentAgent);
                 msg.setContent(obj.toJSONString());
                 myAgent.send(msg);
-                SingletoneBuffer.getInstance().addLogToPrint(Log.log(myAgent, ": request to " + (String)obj.get("action") + " " + (String) obj.get("additional_info")));
+                String desire = (String)obj.get("action") + " " + (String) obj.get("additional_info");
+                sendActionToColleagues(desire);
+                SingletoneBuffer.getInstance().addLogToPrint(Log.log(myAgent, "request to " + desire));
             }
         });
 
@@ -120,10 +173,21 @@ public class ColorAgent extends Agent{
             int responses=0;
             @Override
             public void action() {
-                ACLMessage msg = myAgent.blockingReceive();
+                ACLMessage msg;
+                if (blocking)
+                    msg=myAgent.blockingReceive(template);
+                else
+                    msg= myAgent.receive(template);
                 if (msg != null) {
                     responses++;
-                    responseInterpret(myAgent, msg);
+                    try {
+                        if(Objects.equals(msg.getProtocol(), Proctocols.ENV_STATUS))
+                            handleContentObjectResponse(myAgent, msg);
+                        else
+                            responseInterpret(myAgent, msg);
+                    } catch (UnreadableException e) {
+                        ;//aici era o problema ca desi seteaza corect envStatus, arunca o exceptie de unreadableexc
+                    }
                 }
                 else {
                     block();
@@ -135,43 +199,43 @@ public class ColorAgent extends Agent{
             }
         });
     }
-    protected void Pick(String tile_color) {
+    protected void Pick(String tile_color, MessageTemplate template, int messageType, String protocol) {
 
         JSONObject obj = new JSONObject();
         obj.put("action", "pick");
         obj.put("additional_info", tile_color);
         obj.put("agent_color", colorAgentData.getColor());
 
-        performCommunication(obj);
+        performCommunication(obj,template, messageType, protocol, false);
     }
 
-    protected void DropTile() {
+    protected void DropTile(MessageTemplate template, int messageType, String protocol) {
 
         JSONObject obj = new JSONObject();
         obj.put("action", "drop_tile");
         obj.put("additional_info", colorAgentData.getTile().getColor());
         obj.put("agent_color", colorAgentData.getColor());
 
-        performCommunication(obj);
+        performCommunication(obj,template, messageType, protocol, false);
     }
 
-    protected void Move(String direction) {
+    protected void Move(String direction, MessageTemplate template, int messageType, String protocol) {
         JSONObject obj = new JSONObject();
         obj.put("action", "move");
         obj.put("additional_info", direction);
         obj.put("agent_color", colorAgentData.getColor());
 
-        performCommunication(obj);
+        performCommunication(obj,template, messageType, protocol, false);
     }
 
-    protected void UseTile(String direction) {
+    protected void UseTile(String direction, MessageTemplate template, int messageType, String protocol) {
         JSONObject obj = new JSONObject();
         obj.put("action", "use_tile");
         obj.put("additional_info", direction);
         obj.put("tile_color", colorAgentData.getTile().getColor());
         obj.put("agent_color", colorAgentData.getColor());
 
-        performCommunication(obj);
+        performCommunication(obj,template, messageType, protocol, false);
     }
 
     protected void TransferPoints(ColorAgent agent, int points) {
@@ -218,30 +282,43 @@ public class ColorAgent extends Agent{
     }
 
 
-    protected void sync()
+    protected void sync(MessageTemplate template,int messageType, String protocol)
     {
         JSONObject obj = new JSONObject();
         obj.put("action", "sync");
         obj.put("additional_info", "");
         obj.put("agent_color", colorAgentData.getColor());
 
-        performCommunication(obj);
+        performCommunication(obj, template, messageType, protocol, true);
+    }
+
+    protected void getEnvStatus(MessageTemplate template,int messageType, String protocol)
+    {
+        JSONObject obj = new JSONObject();
+        obj.put("action", "env-status");
+        obj.put("additional_info", "");
+        obj.put("agent_color", colorAgentData.getColor());
+
+        performCommunication(obj, template, messageType, protocol, true);
     }
     protected void onDiscoveryCompleted() throws InterruptedException {
         SingletoneBuffer.getInstance().addLogToPrint(Log.log(this, "color discovery completed" + colleagues));
 
-       this.sync();
+        this.sync(templateSync, ACLMessage.REQUEST, Proctocols.SYNC);
 
+        this.getEnvStatus(templateEnvStatus,ACLMessage.REQUEST, Proctocols.ENV_STATUS);
+        this.listeningOtherAgents();
 
 //        this.Pick(colorAgentData.getColor());
 
+
         //this.Move("North");
-        this.Move("West");
-        this.Pick("green");
+        this.Move("West",templateActions, ACLMessage.REQUEST, FIPANames.InteractionProtocol.FIPA_REQUEST);
+        this.Pick("green",templateActions, ACLMessage.REQUEST, FIPANames.InteractionProtocol.FIPA_REQUEST);
         //Thread.sleep(300);
        // this.Move("South");
-        this.Move("West");
-        this.UseTile("West");
+        this.Move("West",templateActions, ACLMessage.REQUEST, FIPANames.InteractionProtocol.FIPA_REQUEST);
+        this.UseTile("West",templateActions, ACLMessage.REQUEST, FIPANames.InteractionProtocol.FIPA_REQUEST);
         //this.Pick("green");
         //this.DropTile();
         //Thread.sleep(300);

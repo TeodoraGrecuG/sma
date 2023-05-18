@@ -1,6 +1,8 @@
 package base;
 
-public class ColorAgentData {
+import java.io.Serializable;
+
+public class ColorAgentData implements Serializable {
     int x;
     int y;
     String color;

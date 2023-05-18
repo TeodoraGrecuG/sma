@@ -19,8 +19,7 @@ import jade.proto.AchieveREResponder;
 import org.json.simple.JSONObject;
 import org.json.simple.JSONValue;
 
-import java.io.File;
-import java.io.FileNotFoundException;
+import java.io.*;
 import java.time.LocalTime;
 import java.util.*;
 
@@ -383,14 +382,14 @@ public class EnvironmentAgent extends Agent {
     private void performSync(){
         //sincronizarea starii initiale a scorurilor
         MessageTemplate template = MessageTemplate.and(
-                MessageTemplate.MatchProtocol(FIPANames.InteractionProtocol.FIPA_REQUEST),
+                MessageTemplate.MatchProtocol(Proctocols.SYNC),
                 MessageTemplate.MatchPerformative(ACLMessage.REQUEST) );
 
         addBehaviour(new SimpleBehaviour() {
             List<ACLMessage> tempMsg = new ArrayList<>();
             @Override
             public void action() {
-                ACLMessage msg = myAgent.blockingReceive(template);
+                ACLMessage msg = myAgent.receive(template);
                 if (msg != null) {
                     SingletoneBuffer.getInstance().addLogToPrint(Log.log(myAgent, ": got initial sync request from "+msg.getSender().getLocalName()));
                     tempMsg.add(msg);
@@ -410,7 +409,7 @@ public class EnvironmentAgent extends Agent {
 
                         ACLMessage reply = msg.createReply();
                         reply.setPerformative( ACLMessage.INFORM );
-                        reply.setProtocol(FIPANames.InteractionProtocol.FIPA_REQUEST);
+                        reply.setProtocol(Proctocols.SYNC);
 
                         JSONObject resp = new JSONObject();
                         ColorAgentData temp = environment.getColorAgentData((String) jsonObject.get("agent_color"));
@@ -445,17 +444,22 @@ public class EnvironmentAgent extends Agent {
 
         // actiuni
         addBehaviour(new TickerBehaviour(this,environment.getTimeToPerformAction()) {
+            final MessageTemplate templateActions = MessageTemplate.and(
+                    MessageTemplate.MatchProtocol(FIPANames.InteractionProtocol.FIPA_REQUEST),
+                    MessageTemplate.MatchPerformative(ACLMessage.REQUEST));
             @Override
             protected void onTick() {
                 if(getTickCount() >= environment.getTotalTimeOfWorking()/(float)environment.getTimeToPerformAction()) {
                     stop();
                     //takeDown();
+//                    for(AID aid: colorAgents){
+//                    }
                 }
 
                 ACLMessage req;
                 List<ACLMessage> requests = new ArrayList<>();
                 do{
-                    req = myAgent.receive();
+                    req = myAgent.receive(templateActions);
                     if(req!=null)
                         requests.add(req);
                 }while(req!=null);
@@ -516,6 +520,45 @@ public class EnvironmentAgent extends Agent {
                 if(getTickCount() >= environment.getTotalTimeOfWorking()/(float)environment.timeToPerformAction) {
                     stop();
                 }
+            }
+        });
+
+        // here it receives the environment status requests
+        addBehaviour(new SimpleBehaviour() {
+            final MessageTemplate templateEnvStatus = MessageTemplate.and(
+                    MessageTemplate.MatchProtocol(Proctocols.ENV_STATUS),
+                    MessageTemplate.MatchPerformative(ACLMessage.REQUEST));
+            @Override
+            public void action() {
+                ACLMessage request = myAgent.receive(templateEnvStatus);
+                if(request!=null) {
+                    Object obj = JSONValue.parse(request.getContent());
+                    JSONObject jsonObject = (JSONObject) obj;
+
+                    if (Objects.equals((String) jsonObject.get("action"), "env-status")) {
+                        ACLMessage response = request.createReply();
+                        response.setPerformative(ACLMessage.INFORM);
+                        JSONObject resp = new JSONObject();
+                        resp.put("response", "refuse");
+                        resp.put("action", "env-status");
+                        resp.put("additional_info", " ");
+                        try {
+                            response.setContentObject(environment);
+                            resp.put("response", "accept");
+                            SingletoneBuffer.getInstance().addLogToPrint(Log.log(myAgent, " " + resp.get("response")+" " + (String) jsonObject.get("agent_color") + " " + resp.get("action")));
+                        } catch (IOException e) {
+                            response.setContent(resp.toJSONString());
+                        }
+                        myAgent.send(response);
+                    }
+                }
+                else
+                    block();
+            }
+
+            @Override
+            public boolean done() {
+                return false;
             }
         });
     }
