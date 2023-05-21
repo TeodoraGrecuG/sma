@@ -505,7 +505,7 @@ public class EnvironmentAgent extends Agent {
             }
         });
 
-        addBehaviour(new TickerBehaviour(this,environment.getTimeToPerformAction()) {
+        addBehaviour(new TickerBehaviour(this,TICK_PERIOD) {
             @Override
             protected void onTick() {
                 environment.print();

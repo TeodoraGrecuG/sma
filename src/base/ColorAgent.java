@@ -335,31 +335,6 @@ public class ColorAgent extends Agent{
         if(envStatus.getCell(wantedPos.getX(), wantedPos.getY())==null) {
             isHole = true;
         }
-//            if(wantedPos.getX()-1>=0){
-//                if(envStatus.getCell(wantedPos.getX()-1, wantedPos.getY())!=null) {
-//                    wantedPos.setX(wantedPos.getX() - 1);
-//                    possibleDirection = "East";
-//                }
-//            }
-//            else if(wantedPos.getX()+1<envStatus.getWidth()){
-//                if(envStatus.getCell(wantedPos.getX()+1, wantedPos.getY())!=null) {
-//                    wantedPos.setX(wantedPos.getX() + 1);
-//                    possibleDirection = "West";
-//                }
-//            }
-//            else if(wantedPos.getY()+1<envStatus.getHeight()){
-//                if(envStatus.getCell(wantedPos.getX(), wantedPos.getY()+1)!=null) {
-//                    wantedPos.setY(wantedPos.getY() + 1);
-//                    possibleDirection = "North";
-//                }
-//            }
-//            else if(wantedPos.getY()-1>=0){
-//                if(envStatus.getCell(wantedPos.getX(), wantedPos.getY()-1)!=null) {
-//                    wantedPos.setY(wantedPos.getY() - 1);
-//                    possibleDirection = "South";
-//                }
-//            }
-//        }
 
         // de verificat daca next e groapa ca sa ma opresc ;
         PathFinder pf = new PathFinder(
@@ -370,6 +345,7 @@ public class ColorAgent extends Agent{
         );
         List<String> solution = new ArrayList<>();
         pf.solveMaze(envStatus.cells, solution);
+        SingletoneBuffer.addLogToPrint(Log.log(this, solution));
 
 //        if(wantedPos==null)
 //            return currentPos;
