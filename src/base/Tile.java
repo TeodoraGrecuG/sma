@@ -40,4 +40,12 @@ public class Tile extends CellContent{
     public Tile() {
         super();
     }
+
+    @Override
+    public String toString() {
+        return "Tile{" +
+                "color='" + color + '\'' +
+                ", numberOfElements=" + numberOfElements +
+                '}';
+    }
 }

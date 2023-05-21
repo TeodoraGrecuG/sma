@@ -82,6 +82,9 @@ public class SlaveContainerLauncher
 			int width = Integer.valueOf(input.next());
 			int height = Integer.valueOf(input.next());
 
+			Times.timeToPerformAction = timeToPerformAction;
+			Times.totalTimeOfWorking = totalTimeOfAction;
+
 			for(int i=0;i<numberOfAgents;i++) {
 				tempColor = input.next();
 				colors.add(tempColor);

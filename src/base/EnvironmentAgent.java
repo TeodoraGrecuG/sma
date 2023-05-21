@@ -381,15 +381,11 @@ public class EnvironmentAgent extends Agent {
 
     private void performSync(){
         //sincronizarea starii initiale a scorurilor
-        MessageTemplate template = MessageTemplate.and(
-                MessageTemplate.MatchProtocol(Proctocols.SYNC),
-                MessageTemplate.MatchPerformative(ACLMessage.REQUEST) );
-
         addBehaviour(new SimpleBehaviour() {
             List<ACLMessage> tempMsg = new ArrayList<>();
             @Override
             public void action() {
-                ACLMessage msg = myAgent.receive(template);
+                ACLMessage msg = myAgent.receive(TemplatesForEnvironment.templateSync);
                 if (msg != null) {
                     SingletoneBuffer.getInstance().addLogToPrint(Log.log(myAgent, ": got initial sync request from "+msg.getSender().getLocalName()));
                     tempMsg.add(msg);
@@ -417,6 +413,8 @@ public class EnvironmentAgent extends Agent {
                         resp.put("response", "accept");
                         resp.put("score", temp.getScore());
                         resp.put("additional_info", "");
+                        resp.put("time_to_perform_action", environment.getTimeToPerformAction());
+                        resp.put("total_time_of_action", environment.getTotalTimeOfWorking());
                         resp.put("x", temp.getX());
                         resp.put("y", temp.getY());
                         reply.setContent(resp.toJSONString());
@@ -441,17 +439,13 @@ public class EnvironmentAgent extends Agent {
         SingletoneBuffer.getInstance().printLogs();
         System.out.println("\nhere begins=================================================================");
 
-
         // actiuni
         addBehaviour(new TickerBehaviour(this,environment.getTimeToPerformAction()) {
-            final MessageTemplate templateActions = MessageTemplate.and(
-                    MessageTemplate.MatchProtocol(FIPANames.InteractionProtocol.FIPA_REQUEST),
-                    MessageTemplate.MatchPerformative(ACLMessage.REQUEST));
             @Override
             protected void onTick() {
                 if(getTickCount() >= environment.getTotalTimeOfWorking()/(float)environment.getTimeToPerformAction()) {
                     stop();
-                    //takeDown();
+                    takeDown();
 //                    for(AID aid: colorAgents){
 //                    }
                 }
@@ -459,7 +453,7 @@ public class EnvironmentAgent extends Agent {
                 ACLMessage req;
                 List<ACLMessage> requests = new ArrayList<>();
                 do{
-                    req = myAgent.receive(templateActions);
+                    req = myAgent.receive(TemplatesForEnvironment.templateActions);
                     if(req!=null)
                         requests.add(req);
                 }while(req!=null);
@@ -511,7 +505,7 @@ public class EnvironmentAgent extends Agent {
             }
         });
 
-        addBehaviour(new TickerBehaviour(this,TICK_PERIOD) {
+        addBehaviour(new TickerBehaviour(this,environment.getTimeToPerformAction()) {
             @Override
             protected void onTick() {
                 environment.print();
@@ -525,12 +519,9 @@ public class EnvironmentAgent extends Agent {
 
         // here it receives the environment status requests
         addBehaviour(new SimpleBehaviour() {
-            final MessageTemplate templateEnvStatus = MessageTemplate.and(
-                    MessageTemplate.MatchProtocol(Proctocols.ENV_STATUS),
-                    MessageTemplate.MatchPerformative(ACLMessage.REQUEST));
             @Override
             public void action() {
-                ACLMessage request = myAgent.receive(templateEnvStatus);
+                ACLMessage request = myAgent.receive(TemplatesForEnvironment.templateEnvStatus);
                 if(request!=null) {
                     Object obj = JSONValue.parse(request.getContent());
                     JSONObject jsonObject = (JSONObject) obj;

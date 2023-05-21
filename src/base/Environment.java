@@ -90,10 +90,58 @@ public class Environment implements Serializable
 		return cells[y][x];
 	}
 
+	public void deleteCell(int x, int y){
+		cells[y][x] = null;
+	}
+
 	public void addAgentData(String color,ColorAgentData colorAgentData){
 		agentsData.put(color,colorAgentData);
 	}
 
+	protected<T> List<CoordinatesHelper> getContentCoordinates(Class<?> className, String color) throws ClassNotFoundException {
+		List<CoordinatesHelper> contentCoordinates = new ArrayList<>();
+		for(int i=0;i<height;i++){
+			for(int j=0;j<width;j++) {
+				List<CellContent> cellContents = getCell(j,i).getCellContents();
+
+				for(CellContent cc: cellContents){
+					if(className.isInstance(cc)) {
+						if(Objects.equals(cc.getColor(), color)){
+							if(className == Tile.class) {
+								for (int rr = 0; rr < ((Tile) cc).getNumberOfElements(); rr++)
+									contentCoordinates.add(new CoordinatesHelper(j,i));
+							}
+							else if(className == Hole.class) {
+								for (int rr = 0; rr < ((Hole) cc).getDepth(); rr++)
+									contentCoordinates.add(new CoordinatesHelper(j,i));
+							}
+							else
+								contentCoordinates.add(new CoordinatesHelper(j,i));
+						}
+						if(Objects.equals("all", color))
+							contentCoordinates.add(new CoordinatesHelper(j,i));
+					}
+				}
+			}
+		}
+		return contentCoordinates;
+	}
+	List<CoordinatesHelper> getObstacleCoordinates() throws ClassNotFoundException {
+		;
+		return getContentCoordinates(Obstacle.class, null);
+	}
+
+	List<CoordinatesHelper> getTilesCoordinatesByColor(String color) throws ClassNotFoundException {
+		return getContentCoordinates(Tile.class, color);
+	}
+
+	List<CoordinatesHelper> getAllHoles() throws ClassNotFoundException {
+		return getContentCoordinates(Hole.class, "all");
+	}
+	List<CoordinatesHelper> getHolesCoordinatesByColor(String color) throws ClassNotFoundException {
+
+		return getContentCoordinates(Hole.class, color);
+	}
 
 	public void addAgentData(int x, int y, String color){
 		agentsData.put(color,new ColorAgentData(x,y,color));

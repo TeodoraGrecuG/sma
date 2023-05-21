@@ -2,9 +2,7 @@ package base;;
 import FIPA.FipaMessage;
 import jade.core.AID;
 import jade.core.Agent;
-import jade.core.behaviours.OneShotBehaviour;
-import jade.core.behaviours.ParallelBehaviour;
-import jade.core.behaviours.SimpleBehaviour;
+import jade.core.behaviours.*;
 import jade.domain.DFService;
 import jade.domain.FIPAAgentManagement.DFAgentDescription;
 import jade.domain.FIPAAgentManagement.ServiceDescription;
@@ -37,6 +35,12 @@ public class ColorAgent extends Agent{
 
     Environment envStatus = new Environment();
 
+    Vector<MyFunction> functionPlan = new Vector<>();
+    Vector<HashMap<String, Object>> parametersPlan=new Vector<>();
+
+    int totalTimeOfAction;
+    int timeToPerformAction;
+
     @Override
     public void setup() {
         Object[] args = getArguments();
@@ -65,6 +69,13 @@ public class ColorAgent extends Agent{
     protected void handleContentObjectResponse(Agent myAgent, ACLMessage msg) throws UnreadableException {
         SingletoneBuffer.getInstance().addLogToPrint(Log.log(myAgent, "environment provided its status"));
         envStatus = (Environment) msg.getContentObject();
+
+        try {
+            makePlan();
+        }
+        catch(ClassNotFoundException e){
+            System.out.println(e.toString());
+        }
     }
 
     protected void responseInterpret(Agent agent, ACLMessage msg) throws UnreadableException {
@@ -108,12 +119,16 @@ public class ColorAgent extends Agent{
                     colorAgentData.setScore(score);
                     colorAgentData.setX(xLocal);
                     colorAgentData.setY(yLocal);
+                    totalTimeOfAction = ((Long) jsonObject.get("total_time_of_action")).intValue();
+                    timeToPerformAction = ((Long) jsonObject.get("time_to_perform_action")).intValue();
                     break;
                 }
             }
         }
         else{
             if(!Objects.equals(action, "env-status")){
+                parametersPlan.clear();
+                functionPlan.clear();
                 this.getEnvStatus(templateEnvStatus,ACLMessage.REQUEST, Proctocols.ENV_STATUS);
             }
         }
@@ -127,7 +142,7 @@ public class ColorAgent extends Agent{
             public void action() {
                 ACLMessage msg = myAgent.receive(templateCommunicationBetweenAgents);
                 if (msg != null) {
-                    SingletoneBuffer.getInstance().addLogToPrint(Log.log(myAgent, msg.getSender().getLocalName() + " said: " + msg.getContent()));
+                    //SingletoneBuffer.getInstance().addLogToPrint(Log.log(myAgent, msg.getSender().getLocalName() + " said: " + msg.getContent()));
                 }
                 else {
                     block();
@@ -174,6 +189,7 @@ public class ColorAgent extends Agent{
             @Override
             public void action() {
                 ACLMessage msg;
+                //boolean lblocking=true;
                 if (blocking)
                     msg=myAgent.blockingReceive(template);
                 else
@@ -199,7 +215,8 @@ public class ColorAgent extends Agent{
             }
         });
     }
-    protected void Pick(String tile_color, MessageTemplate template, int messageType, String protocol) {
+    protected MyFunction Pick = (additionalInfo, template, messageType, protocol) -> {
+        String tile_color = additionalInfo;
 
         JSONObject obj = new JSONObject();
         obj.put("action", "pick");
@@ -207,9 +224,9 @@ public class ColorAgent extends Agent{
         obj.put("agent_color", colorAgentData.getColor());
 
         performCommunication(obj,template, messageType, protocol, false);
-    }
+    };
 
-    protected void DropTile(MessageTemplate template, int messageType, String protocol) {
+    protected MyFunction DropTile = (additionalInfo, template, messageType, protocol) -> {
 
         JSONObject obj = new JSONObject();
         obj.put("action", "drop_tile");
@@ -217,18 +234,22 @@ public class ColorAgent extends Agent{
         obj.put("agent_color", colorAgentData.getColor());
 
         performCommunication(obj,template, messageType, protocol, false);
-    }
+    };
 
-    protected void Move(String direction, MessageTemplate template, int messageType, String protocol) {
+    protected MyFunction Move = (additionalInfo, template, messageType, protocol) -> {
+        String direction = additionalInfo;
+
         JSONObject obj = new JSONObject();
         obj.put("action", "move");
         obj.put("additional_info", direction);
         obj.put("agent_color", colorAgentData.getColor());
 
         performCommunication(obj,template, messageType, protocol, false);
-    }
+    };
 
-    protected void UseTile(String direction, MessageTemplate template, int messageType, String protocol) {
+    protected MyFunction UseTile = (additionalInfo, template, messageType, protocol) -> {
+        String direction = additionalInfo;
+
         JSONObject obj = new JSONObject();
         obj.put("action", "use_tile");
         obj.put("additional_info", direction);
@@ -236,51 +257,7 @@ public class ColorAgent extends Agent{
         obj.put("agent_color", colorAgentData.getColor());
 
         performCommunication(obj,template, messageType, protocol, false);
-    }
-
-    protected void TransferPoints(ColorAgent agent, int points) {
-//    protected void TransferPoints(int points) {
-        // Fill the REQUEST message
-        ACLMessage msg = new ACLMessage(ACLMessage.REQUEST);
-        msg.addReceiver(environmentAgent);
-        msg.setProtocol(FIPANames.InteractionProtocol.FIPA_REQUEST);
-
-        // We want to receive a reply in 10 secs
-        msg.setReplyByDate(new Date(System.currentTimeMillis() + 10000));
-        JSONObject obj = new JSONObject();
-        obj.put("action", "transfer_points");
-        obj.put("agent", agent.colorAgentData);
-        obj.put("points", points);
-        obj.put("Current x", colorAgentData.getX());
-        obj.put("Current y", colorAgentData.getY());
-        msg.setContent(obj.toJSONString());
-
-        addBehaviour(new AchieveREInitiator(this, msg) {
-            protected void handleInform(ACLMessage inform) {
-                System.out.println("Agent " + inform.getSender().getName() + " successfully performed the requested action, got " + inform.getContent());
-            }
-
-            protected void handleRefuse(ACLMessage refuse) {
-                System.out.println("Agent " + refuse.getSender().getName() + " refused to perform the requested action");
-            }
-
-            protected void handleFailure(ACLMessage failure) {
-                if (failure.getSender().equals(myAgent.getAMS())) {
-                    // FAILURE notification from the JADE runtime: the receiver
-                    // does not exist
-                    System.out.println("Responder does not exist");
-                } else {
-                    System.out.println("Agent " + failure.getSender().getName() + " failed to perform the requested action");
-                }
-            }
-
-            protected void handleAllResultNotifications(Vector notifications) {
-                //System.out.println("Timeout expired: missing responses");
-            }
-        });
-
-    }
-
+    };
 
     protected void sync(MessageTemplate template,int messageType, String protocol)
     {
@@ -301,24 +278,228 @@ public class ColorAgent extends Agent{
 
         performCommunication(obj, template, messageType, protocol, true);
     }
+
+    private List<CoordinatesHelper> removeEmptyHolesCoordinates(List<CoordinatesHelper> holesCoordinates){
+        List<CoordinatesHelper> holesCoordinatesToReturn = new ArrayList<>();
+
+        for (CoordinatesHelper ch: holesCoordinates){
+            if(((Hole)envStatus.getCell(ch.getX(), ch.getY()).getCellContents().get(0)).getDepth()>0)
+                holesCoordinatesToReturn.add(ch);
+        }
+
+        return holesCoordinates;
+    }
+
+    /**
+     * sets unreachable cells from environment to null
+     * @param reasonCoordinates - coordinates of elements that make cells unreachable
+     */
+    private void removeUnreachableCells(List<CoordinatesHelper> reasonCoordinates){
+        for(CoordinatesHelper ch: reasonCoordinates){
+            envStatus.deleteCell(ch.getX(), ch.getY());
+        }
+    }
+
+    private List<Integer> computeDistanceToAllNeededElements(CoordinatesHelper current, List<CoordinatesHelper> neededElements){
+        List<Integer> distances = new ArrayList<>();
+        int distance;
+
+        for(CoordinatesHelper ch: neededElements){
+            distance = Math.abs(current.getX()-ch.getX())+Math.abs(current.getY()-ch.getY());
+            distances.add(distance);
+        }
+
+        return distances;
+    }
+
+    private CoordinatesHelper getClosestElement(List<Integer> distances, List<CoordinatesHelper> neededElements){
+        if(distances.size()==0)
+            return null;
+
+        int minValue=distances.get(0);
+        int position = 0;
+        for(int i=0;i<distances.size();i++){
+            if(distances.get(i)<minValue) {
+                minValue = distances.get(i);
+                position = i;
+            }
+        }
+
+        return neededElements.remove(position);
+    }
+
+    CoordinatesHelper goToPos(CoordinatesHelper currentPos, CoordinatesHelper wantedPos){
+        String possibleDirection="";
+        boolean isHole=false;
+
+        if(envStatus.getCell(wantedPos.getX(), wantedPos.getY())==null) {
+            isHole = true;
+        }
+//            if(wantedPos.getX()-1>=0){
+//                if(envStatus.getCell(wantedPos.getX()-1, wantedPos.getY())!=null) {
+//                    wantedPos.setX(wantedPos.getX() - 1);
+//                    possibleDirection = "East";
+//                }
+//            }
+//            else if(wantedPos.getX()+1<envStatus.getWidth()){
+//                if(envStatus.getCell(wantedPos.getX()+1, wantedPos.getY())!=null) {
+//                    wantedPos.setX(wantedPos.getX() + 1);
+//                    possibleDirection = "West";
+//                }
+//            }
+//            else if(wantedPos.getY()+1<envStatus.getHeight()){
+//                if(envStatus.getCell(wantedPos.getX(), wantedPos.getY()+1)!=null) {
+//                    wantedPos.setY(wantedPos.getY() + 1);
+//                    possibleDirection = "North";
+//                }
+//            }
+//            else if(wantedPos.getY()-1>=0){
+//                if(envStatus.getCell(wantedPos.getX(), wantedPos.getY()-1)!=null) {
+//                    wantedPos.setY(wantedPos.getY() - 1);
+//                    possibleDirection = "South";
+//                }
+//            }
+//        }
+
+        // de verificat daca next e groapa ca sa ma opresc ;
+        PathFinder pf = new PathFinder(
+                envStatus.getHeight(),
+                envStatus.getWidth(),
+                currentPos,
+                wantedPos
+        );
+        List<String> solution = new ArrayList<>();
+        pf.solveMaze(envStatus.cells, solution);
+
+//        if(wantedPos==null)
+//            return currentPos;
+
+        if(solution.size()>0) {
+            int i = 0;
+            for (i = 0; i < solution.size() - 1; i++) {
+                functionPlan.add(Move);
+                int finalI = i;
+                parametersPlan.add(new HashMap<>() {{
+                    put("additional_info", solution.get(finalI)); // aici sa pun in additional info directia
+                    put("template", templateActions);
+                    put("messageType", ACLMessage.REQUEST);
+                    put("protocol", FIPANames.InteractionProtocol.FIPA_REQUEST);
+                }});
+            }
+            int finalI1 = i;
+            if (isHole) {
+                // usetile
+                functionPlan.add(UseTile);
+                if(Objects.equals(solution.get(finalI1), "West"))
+                    wantedPos.setX(wantedPos.getX()+1);
+                if(Objects.equals(solution.get(finalI1), "East"))
+                    wantedPos.setX(wantedPos.getX()-1);
+                if(Objects.equals(solution.get(finalI1), "North"))
+                    wantedPos.setY(wantedPos.getY()+1);
+                if(Objects.equals(solution.get(finalI1), "South"))
+                    wantedPos.setY(wantedPos.getY()-1);
+            } else {
+                functionPlan.add(Move);
+            }
+
+            parametersPlan.add(new HashMap<>() {{
+                put("additional_info", solution.get(finalI1)); // aici sa pun in additional info directia
+                put("template", templateActions);
+                put("messageType", ACLMessage.REQUEST);
+                put("protocol", FIPANames.InteractionProtocol.FIPA_REQUEST);
+            }});
+            return wantedPos;
+        }
+        else
+            return currentPos;
+    }
+
+    void makePlan() throws ClassNotFoundException {
+        CoordinatesHelper currentPos = new CoordinatesHelper(colorAgentData.getX(), colorAgentData.getY());
+
+        // obtin toate elementele de care am nevoie
+        List<CoordinatesHelper> myColorTiles = envStatus.getTilesCoordinatesByColor(colorAgentData.getColor());
+        List<CoordinatesHelper> myColorHoles = envStatus.getHolesCoordinatesByColor(colorAgentData.getColor());
+        List<CoordinatesHelper> obstacles = envStatus.getObstacleCoordinates();
+        List<CoordinatesHelper> allHoles = envStatus.getAllHoles();
+
+        // elimin din liste gropile cu adancimi nule
+        myColorHoles = removeEmptyHolesCoordinates(myColorHoles);
+        allHoles = removeEmptyHolesCoordinates(allHoles);
+
+        // elimin celulele prin care nu pot merge - le setez null
+        removeUnreachableCells(allHoles);
+        removeUnreachableCells(obstacles);
+
+        while(myColorTiles.size()>0) {
+            // calculez distantele de la agent la toate tile-urile care il intereseaza
+            List<Integer> distances = computeDistanceToAllNeededElements(currentPos, myColorTiles);
+
+            // o alege pe cea mai mica si merge la acel tile
+            CoordinatesHelper whereToGo = getClosestElement(distances, myColorTiles);
+            currentPos = goToPos(currentPos, whereToGo);
+
+            // pick
+            functionPlan.add(Pick);
+            parametersPlan.add(new HashMap<>() {{
+                put("additional_info", colorAgentData.getColor());
+                put("template", templateActions);
+                put("messageType", ACLMessage.REQUEST);
+                put("protocol", FIPANames.InteractionProtocol.FIPA_REQUEST);
+            }});
+
+            // calculez distanta de la tile la groapa
+            distances = computeDistanceToAllNeededElements(currentPos, myColorHoles);
+
+            // o aleg pe cea mai mica si merg acolo si folosesc dala
+            whereToGo = getClosestElement(distances, myColorHoles);
+            currentPos = goToPos(currentPos, whereToGo);
+
+        }
+
+    }
     protected void onDiscoveryCompleted() throws InterruptedException {
         SingletoneBuffer.getInstance().addLogToPrint(Log.log(this, "color discovery completed" + colleagues));
 
         this.sync(templateSync, ACLMessage.REQUEST, Proctocols.SYNC);
 
         this.getEnvStatus(templateEnvStatus,ACLMessage.REQUEST, Proctocols.ENV_STATUS);
+
         this.listeningOtherAgents();
+
+        addBehaviour(new TickerBehaviour(this, Times.timeToPerformAction) {
+            @Override
+            protected void onTick() {
+                if(getTickCount() >= Times.totalTimeOfWorking/(float)Times.timeToPerformAction) {
+                    stop();
+                    takeDown();
+                }
+
+                if(functionPlan.size()>0) {
+                    MyFunction f = functionPlan.remove(0);
+                    HashMap<String, Object> param = parametersPlan.remove(0);
+                    f.call(
+                            (String) param.get("additional_info"),
+                            (MessageTemplate) param.get("template"),
+                            (Integer) param.get("messageType"),
+                            (String) param.get("protocol")
+                    );
+                }
+            }
+        });
+
+
 
 //        this.Pick(colorAgentData.getColor());
 
 
         //this.Move("North");
-        this.Move("West",templateActions, ACLMessage.REQUEST, FIPANames.InteractionProtocol.FIPA_REQUEST);
-        this.Pick("green",templateActions, ACLMessage.REQUEST, FIPANames.InteractionProtocol.FIPA_REQUEST);
-        //Thread.sleep(300);
-       // this.Move("South");
-        this.Move("West",templateActions, ACLMessage.REQUEST, FIPANames.InteractionProtocol.FIPA_REQUEST);
-        this.UseTile("West",templateActions, ACLMessage.REQUEST, FIPANames.InteractionProtocol.FIPA_REQUEST);
+//        this.Move("West",templateActions, ACLMessage.REQUEST, FIPANames.InteractionProtocol.FIPA_REQUEST);
+//        this.Pick("green",templateActions, ACLMessage.REQUEST, FIPANames.InteractionProtocol.FIPA_REQUEST);
+//        //Thread.sleep(300);
+//       // this.Move("South");
+//        this.Move("West",templateActions, ACLMessage.REQUEST, FIPANames.InteractionProtocol.FIPA_REQUEST);
+//        this.UseTile("West",templateActions, ACLMessage.REQUEST, FIPANames.InteractionProtocol.FIPA_REQUEST);
         //this.Pick("green");
         //this.DropTile();
         //Thread.sleep(300);
