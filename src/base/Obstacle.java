@@ -6,4 +6,9 @@ public class Obstacle extends CellContent{
     }
     @Override
     public String getColor(){return null;}
+
+    @Override
+    public String toString() {
+        return "Obstacle{}";
+    }
 }

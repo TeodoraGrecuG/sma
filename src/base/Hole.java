@@ -30,4 +30,12 @@ public class Hole extends CellContent{
     public Hole() {
         super();
     }
+
+    @Override
+    public String toString() {
+        return "Hole{" +
+                "color='" + color + '\'' +
+                ", depth=" + depth +
+                '}';
+    }
 }
